@@ -11,6 +11,11 @@
     Layout modifier that, if only a single window is on screen, places that window
     in the middle of the screen.
 
+  * `XMonad.Hooks.BorderPerWindow`
+
+    While XMonad provides config to set all window borders at the same width,
+    this extension defines and sets border width for each window.
+
 ### Bug Fixes and Minor Changes
 
 ## 0.17.0 (October 27, 2021)
