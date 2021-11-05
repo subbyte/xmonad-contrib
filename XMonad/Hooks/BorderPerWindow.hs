@@ -80,28 +80,23 @@ import Graphics.X11.Xlib (Dimension)
 --
 -- 3. 'XMonad.Layout.VoidBorders' allows one to choose layout but not window.
 
--- | The core type that records border width per window
-data WindowBorderSpec
-    = WindowBorderSpec Window Dimension deriving (Read, Show)
-
--- | The XMonad message that transfers 'WindowBorderSpec' from the window
+-- | The XMonad message that transfers the window border spec from the window
 -- creation event to the layout handling function.
 -- Note that XMonad reads config and draws window border after 'ManageHook's
 -- are applied. It does not work if we set the border in a 'ManageHook'
 -- (hooking window creation). So we choose to send a message in
 -- 'defineWindowBorder' function to a later stage, e.g., layout handling, to
 -- set the window border.
-data WindowBorderSpecMessage
-    = WindowBorderSpecMessage WindowBorderSpec deriving (Read, Show)
+data WindowBorderSpec
+    = WindowBorderSpec Window Dimension deriving (Read, Show)
 
--- | Define 'WindowBorderSpecMessage' as a XMonad 'Message'
-instance Message WindowBorderSpecMessage
+instance Message WindowBorderSpec
 
 -- | The function to specify border width in a 'ManageHook'.
 defineWindowBorder :: Dimension -> ManageHook
 defineWindowBorder bw = do
     w <- ask
-    liftX . broadcastMessage . WindowBorderSpecMessage $ WindowBorderSpec w bw
+    liftX . broadcastMessage $ WindowBorderSpec w bw
     idHook
 
 -- | The core XMonad 'LayoutModifier' type for this extension. This will be
@@ -114,17 +109,16 @@ data BorderPerWindow a
 instance LayoutModifier BorderPerWindow a where
     modifierDescription = const "BorderPerWindow"
 
-    redoLayout (BorderPerWindow Nothing) _ _ wrs =
-        return (wrs, Nothing)
+    hook (BorderPerWindow Nothing) =
+        return ()
 
-    redoLayout (BorderPerWindow (Just (WindowBorderSpec w bw))) _ _ wrs = do
+    hook (BorderPerWindow (Just (WindowBorderSpec w bw))) =
         withDisplay $ \d -> io $ setWindowBorderWidth d w bw
-        return (wrs, Nothing)
 
     pureMess (BorderPerWindow _) msg
-        | Just (WindowBorderSpecMessage spec) <- fromMessage msg =
+        | Just spec@WindowBorderSpec{} <- fromMessage msg =
             Just . BorderPerWindow $ Just spec
-        | otherwise                                              =
+        | otherwise                                       =
             Nothing
 
 -- | The function to modify layouts in 'layoutHook'.
